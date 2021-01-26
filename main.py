@@ -10,13 +10,15 @@ import logging
 
 """
 To do:
-- Error handle the input file data
-- Fix program exiting if notification time is invalid
 """
 
 class MyHandler(FileSystemEventHandler):
+    def __init__(self, observer):
+        object.__init__(self)
+        self.observer = observer
     def on_modified(self, event):
         print(f'event type: {event.event_type}  path : {event.src_path}')
+        self.observer.stop()
         os.execv(sys.executable, ['python'] + sys.argv)
 
 def notification(people):
@@ -31,13 +33,15 @@ def notification(people):
         toast = ToastNotifier()
         toast.show_toast("Birthday Reminder", "It is {}'s brithday today!".format(", ".join(names)), duration=20)
 
+def checkDate(date):
+    parts = date.split('/')
+    if(len(parts) != 2 or int(parts[0]) < 1 or int(parts[0]) > 12
+        or int(parts[1]) < 1 or int(parts[1]) > 31):
+        return 0
+    return 1
+
 def main():
     path = os.getcwd()
-
-    observer = Observer()
-    event_handler = MyHandler()
-    observer.schedule(event_handler, path, recursive=False)
-    observer.start()
 
     print("Birthday notification system is active.")
     people = []
@@ -47,28 +51,36 @@ def main():
         notifyTime = lines[0].rstrip()
         lines.pop(0)
         try:
-            print(datetime.strptime(notifyTime, '%H:%M'))
-        except:
+            datetime.strptime(notifyTime, '%H:%M')
+        except ValueError:
             print("Invalid time for notification.")
              
         for line in lines:
             person = line.rstrip().split(' ')
+            if(len(person) != 2):
+                print("Text file has an invalid entry.")
+            elif(checkDate(person[1]) == 0):
+                print("Text file has an invalid date.")
             people.append(person)
     else:
         print("File is not valid! Only .txt files!")
         return
 
+    observer = Observer()
+    event_handler = MyHandler(observer)
+    observer.schedule(event_handler, path, recursive=False)
+    observer.start()
+
     try:
         schedule.every().day.at(str(notifyTime)).do(notification, people)
-
         while True:
             schedule.run_pending()
             time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
     except:
         print("Scheduler not working.")
-    finally:
-        observer.stop()
-        observer.join()
+    observer.join()
 
 if __name__ == "__main__":
     main()
