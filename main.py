@@ -8,10 +8,6 @@ import sys
 import os
 import logging
 
-"""
-To do:
-"""
-
 class MyHandler(FileSystemEventHandler):
     def __init__(self, observer):
         object.__init__(self)
@@ -45,6 +41,9 @@ def main():
 
     print("Birthday notification system is active.")
     people = []
+    if(len(sys.argv) != 2):
+        print("Invalid number of arguments. Run: ./py -3 main.py [text_file]")
+        sys.exit(0)
     if(os.path.isfile(sys.argv[1]) and sys.argv[1].endswith('.txt')):
         f = open(sys.argv[1], "r")
         lines = f.readlines()
